@@ -113,7 +113,7 @@
     <p>Click nodes to collapse/expand paths. Drag the background to pan, use wheel to zoom.</p>
     
     <!-- Injected requested dynamic system runtime baseline timestamp container -->
-    <div class="commit-timestamp">Last Committed: June 26, 2026 @ 17.01 EDT</div>
+    <div class="commit-timestamp">Last Committed: June 26, 2026 @ 17.08 EDT</div>
     
     <div class="controls-card">
         <div>
@@ -290,15 +290,19 @@
                     tooltip.style("opacity", 0);
                 });
             }
-d3.select("#germany-slider").on("input", function() {
-weights.germany = +this.value / 100;
-d3.select("#germany-val").text(this.value + "%");
-render();
-});
-d3.select("#france-slider").on("input", function() {
-weights.france = +this.value / 100;
-d3.select("#france-val").text(this.value + "%");
-render();
-});
-render();
-});
+        
+            d3.select("#germany-slider").on("input", function() {
+                weights.germany = +this.value / 100;
+                d3.select("#germany-val").text(this.value + "%");
+                render();
+            });
+            d3.select("#france-slider").on("input", function() {
+                weights.france = +this.value / 100;
+                d3.select("#france-val").text(this.value + "%");
+                render();
+            });
+        render();
+        });
+    </script>
+</body>
+</html>
