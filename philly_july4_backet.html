@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <title>Philadelphia July 4th Matchup Probability Tree</title>
-    <!-- Load clean production build of D3 directly -->
     <script src="https://cloudflare.com"></script>
     <script>
         if (typeof d3 === 'undefined') {
@@ -21,48 +20,72 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            overflow: hidden;
         }
-        h1 { color: #f8fafc; margin-bottom: 5px; font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
-        p { color: #64748b; margin-top: 0; margin-bottom: 25px; font-size: 14px; }
+        h1 { color: #f8fafc; margin-bottom: 5px; font-size: 26px; font-weight: 700; }
+        p { color: #64748b; margin-top: 0; margin-bottom: 5px; font-size: 14px; }
         
-        /* Interactive Controls Card */
+        /* New timestamp text layout styling */
+        .commit-timestamp {
+            font-family: monospace;
+            color: #38bdf8;
+            font-size: 11px;
+            margin-top: 0;
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.8;
+        }
+        
         .controls-card {
             background: #111827;
             border: 1px solid #1f2937;
             border-radius: 12px;
             padding: 15px 25px;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             display: flex;
             align-items: center;
             gap: 20px;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+            z-index: 10;
         }
         .controls-card label { font-size: 13px; color: #9ca3af; font-weight: 600; }
-        .controls-card input[type=range] {
-            accent-color: #38bdf8;
-            cursor: pointer;
-            width: 150px;
-        }
+        .controls-card input[type=range] { accent-color: #38bdf8; cursor: pointer; width: 150px; }
         .weight-display { font-family: monospace; color: #38bdf8; font-weight: bold; font-size: 14px; }
 
-        /* SVG Structure Styling */
-        #tree-container { background: #0b0f19; border-radius: 16px; width: 100%; max-width: 1000px; }
-        .node text { font-size: 13px; fill: #e2e8f0; font-weight: 500; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+        #tree-container { 
+            background: #0d1321; 
+            border: 1px solid #1f2937;
+            border-radius: 16px; 
+            width: 100%; 
+            max-width: 1000px; 
+            height: 550px;
+            cursor: grab;
+        }
+        #tree-container:active { cursor: grabbing; }
+        
+        .node text { font-size: 13px; fill: #e2e8f0; font-weight: 500; pointer-events: none; }
         .node--leaf text { font-weight: 600; fill: #f8fafc; }
         
-        /* Smooth Custom Bezier Connections */
+        .node rect {
+            fill: #1e293b;
+            stroke: #38bdf8;
+            stroke-width: 2px;
+            cursor: pointer;
+            transition: fill 0.2s, stroke 0.2s;
+        }
+        .node-collapsed rect {
+            fill: #38bdf8 !important;
+            stroke: #f8fafc !important;
+        }
+
         .link {
             fill: none;
             stroke: rgba(51, 65, 85, 0.4);
             stroke-width: 2.5px;
-            transition: stroke 0.25s, stroke-width 0.25s;
+            transition: stroke 0.2s, stroke-width 0.2s;
         }
-        .link-active {
-            stroke: #38bdf8 !important;
-            stroke-width: 4px !important;
-        }
+        .link-active { stroke: #38bdf8 !important; stroke-width: 4px !important; }
 
-        /* Beautiful Dynamic Tooltips */
         .tooltip {
             position: absolute;
             padding: 12px;
@@ -75,7 +98,7 @@
             opacity: 0;
             box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);
             line-height: 1.5;
-            transition: opacity 0.15s ease-out;
+            z-index: 100;
         }
         .tooltip-header { color: #9ca3af; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
         .tooltip-stat { font-size: 16px; font-weight: bold; color: #34d399; }
@@ -84,9 +107,11 @@
 <body>
 
     <h1>Philadelphia July 4th Round of 16 Tree</h1>
-    <p>Adjust variables below to dynamically simulate probability distributions cascading down to Lincoln Financial Field.</p>
+    <p>Click nodes to collapse/expand paths. Drag the background to pan, use wheel to zoom.</p>
     
-    <!-- Interactive Variable Controller Panel -->
+    <!-- Injected requested dynamic system runtime baseline timestamp container -->
+    <div class="commit-timestamp">Last Committed: June 26, 2026 @ 16:14 EDT</div>
+    
     <div class="controls-card">
         <div>
             <label for="germany-slider">🇩🇪 Germany Advance Chance: </label>
@@ -108,155 +133,118 @@
             if (typeof d3 === 'undefined') return;
 
             const width = 1000;
-            const height = 500;
-            const margin = { top: 20, right: 200, bottom: 20, left: 180 };
+            const height = 550;
+            const margin = { top: 20, right: 220, bottom: 20, left: 220 };
 
-            // Initialize Main Interactive Canvas Environment
-            const svg = d3.select("#tree-container")
+            const baseSvg = d3.select("#tree-container")
                 .append("svg")
-                .attr("viewBox", `0 0 ${width} ${height}`)
-                .append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`);
+                .attr("width", "100%")
+                .attr("height", "100%")
+                .attr("viewBox", `0 0 ${width} ${height}`);
+
+            const zoomGroup = baseSvg.append("g")
+                .attr("transform", `translate(${margin.left},${height/2 - 20})`);
+
+            baseSvg.call(d3.zoom()
+                .scaleExtent([0.5, 2])
+                .on("zoom", (event) => {
+                    zoomGroup.attr("transform", event.transform);
+                })
+            );
 
             const tooltip = d3.select("#tooltip");
-            const treeLayout = d3.tree().size([height - margin.top - margin.bottom, width - margin.left - margin.right]);
+            const treeLayout = d3.tree().nodeSize([45, 240]); 
 
-            // Model parameters managed by slider inputs
             let weights = { germany: 0.85, france: 0.55 };
+            let rawDataRoot = null; 
 
-            function updateTree() {
-                // Computed probabilities updated live based on the sliders
-                const treeData = {
+            function buildDataBlueprint() {
+                return {
                     name: "🏟️ Lincoln Financial Field",
                     type: "root",
+                    id: "root",
                     children: [
                         {
                             name: "🇩🇪 Germany (Match 74 Winner)",
                             type: "mid",
+                            id: "germany_branch",
                             prob: weights.germany,
                             children: [
-                                { name: "🇫🇷 vs. France", prob: weights.france, joint: weights.germany * weights.france },
-                                { name: "🇳🇴 vs. Norway", prob: (1 - weights.france) * 0.75, joint: weights.germany * ((1 - weights.france) * 0.75) },
-                                { name: "🏴‍☠️ vs. Group I Underdog", prob: (1 - weights.france) * 0.25, joint: weights.germany * ((1 - weights.france) * 0.25) }
+                                { name: "🇫🇷 vs. France", id: "g_fr", prob: weights.france, joint: weights.germany * weights.france },
+                                { name: "🇳🇴 vs. Norway", id: "g_no", prob: (1 - weights.france) * 0.75, joint: weights.germany * ((1 - weights.france) * 0.75) },
+                                { name: "🏴‍☠️ vs. Group I Underdog", id: "g_ud", prob: (1 - weights.france) * 0.25, joint: weights.germany * ((1 - weights.france) * 0.25) }
                             ]
                         },
                         {
                             name: "🇺🇸 Group E Underdog (Upset Path)",
                             type: "mid",
+                            id: "upset_branch",
                             prob: 1 - weights.germany,
                             children: [
-                                { name: "🇫🇷 vs. France", prob: weights.france, joint: (1 - weights.germany) * weights.france },
-                                { name: "🇳🇴 vs. Norway", prob: (1 - weights.france) * 0.75, joint: (1 - weights.germany) * ((1 - weights.france) * 0.75) },
-                                { name: "🏴‍☠️ vs. Group I Underdog", prob: (1 - weights.france) * 0.25, joint: (1 - weights.germany) * ((1 - weights.france) * 0.25) }
+                                { name: "🇫🇷 vs. France", id: "u_fr", prob: weights.france, joint: (1 - weights.germany) * weights.france },
+                                { name: "🇳🇴 vs. Norway", id: "u_no", prob: (1 - weights.france) * 0.75, joint: (1 - weights.germany) * ((1 - weights.france) * 0.75) },
+                                { name: "🏴‍☠️ vs. Group I Underdog", id: "u_ud", prob: (1 - weights.france) * 0.25, joint: (1 - weights.germany) * ((1 - weights.france) * 0.25) }
                             ]
                         }
                     ]
                 };
+            }
 
-                const root = d3.hierarchy(treeData);
-                treeLayout(root);
+            function render() {
+                const dataStructure = buildDataBlueprint();
 
-                // DATA JOIN: Links (Edges)
+                if (rawDataRoot) {
+                    const findAndCopyState = (targetNode, sourceNode) => {
+                        if (sourceNode._children && targetNode.children) {
+                            targetNode._children = targetNode.children;
+                            targetNode.children = null;
+                        }
+                        if (sourceNode.children && targetNode.children) {
+                            targetNode.children.forEach(tc => {
+                                const sc = sourceNode.children.find(s => s.id === tc.id) || sourceNode._children?.find(s => s.id === tc.id);
+                                if (sc) findAndCopyState(tc, sc);
+                            });
+                        }
+                    };
+                    findAndCopyState(dataStructure, rawDataRoot.data);
+                }
+
+                rawDataRoot = d3.hierarchy(dataStructure);
+                treeLayout(rawDataRoot);
+
+                const descendants = rawDataRoot.descendants();
+                const linksData = rawDataRoot.links();
+
                 const pathGenerator = d3.linkHorizontal().x(d => d.y).y(d => d.x);
-                const links = svg.selectAll(".link").data(root.links());
-                
-                links.exit().remove();
-                
-                const linksEnter = links.enter().append("path")
+                const linkSelection = zoomGroup.selectAll(".link")
+                    .data(linksData, d => d.target.data.id);
+
+                linkSelection.exit().remove();
+
+                const linkEnter = linkSelection.enter().append("path")
                     .attr("class", "link")
-                    .merge(links)
+                    .merge(linkSelection)
+                    .transition().duration(250)
                     .attr("d", pathGenerator);
 
-                // DATA JOIN: Nodes
-                const nodes = svg.selectAll(".node").data(root.descendants(), d => d.data.name);
+                const nodeSelection = zoomGroup.selectAll(".node")
+                    .data(descendants, d => d.data.id);
 
-                nodes.exit().remove();
+                nodeSelection.exit().remove();
 
-                const nodesEnter = nodes.enter().append("g")
-                    .attr("class", d => `node ${d.children ? "" : "node--leaf"}`);
+                const nodeEnter = nodeSelection.enter().append("g")
+                    .attr("class", "node");
 
-                // Custom Graphical UI Enhancements: Visual anchors instead of basic dots
-                nodesEnter.append("rect")
-                    .attr("width", 24)
-                    .attr("height", 24)
-                    .attr("x", -12)
-                    .attr("y", -12)
-                    .attr("rx", 6)
-                    .style("fill", "#1e293b")
-                    .style("stroke", "#38bdf8")
-                    .style("stroke-width", "1.5px")
-                    .style("cursor", "pointer");
+                nodeEnter.append("rect")
+                    .attr("width", 20)
+                    .attr("height", 20)
+                    .attr("x", -10)
+                    .attr("y", -10)
+                    .attr("rx", 5);
 
-                // Text node labels styling inside the layout boundary
-                nodesEnter.append("text")
-                    .attr("dy", ".35em")
-                    .merge(nodes.select("text"))
-                    .attr("x", d => d.children ? -18 : 18)
-                    .style("text-anchor", d => d.children ? "end" : "start")
-                    .text(d => d.data.name);
+                nodeEnter.append("text")
+                    .attr("dy", ".35em");
 
-                // Merge and transition existing elements gracefully
-                const nodesMerged = nodesEnter.merge(nodes);
-                nodesMerged.attr("transform", d => `translate(${d.y},${d.x})`);
-
-                // Event Listeners for hover and link path tracking
-                nodesMerged.selectAll("rect")
-                    .on("mouseover", function(event, d) {
-                        d3.select(this).style("fill", "#38bdf8").style("stroke", "#f8fafc");
-
-                        // Highlight the path directly leading up to this matchup
-                        linksEnter.filter(l => l.target === d || l.source === d).classed("link-active", true);
-
-                        let tooltipHtml = "";
-                        if (d.data.type === "root") {
-                            tooltipHtml = `<div class="tooltip-header">Host Venue</div><strong>${d.data.name}</strong><br>Philadelphia, July 4th`;
-                        } else if (d.data.type === "mid") {
-                            tooltipHtml = `<div class="tooltip-header">Feeder Probability</div><strong>${d.data.name}</strong><br><span class="tooltip-stat">${(d.data.prob * 100).toFixed(0)}%</span> chance to reach Philly`;
-                        } else {
-                            tooltipHtml = `<div class="tooltip-header">Calculated Joint Output</div><strong>${d.data.name} Matchup</strong><br>Total Bracket Probability: <span class="tooltip-stat">${(d.data.joint * 100).toFixed(1)}%</span>`;
-                        }
-
-
-tooltip.style("opacity", 1)
-.html(tooltipHtml)
-.style("left", (event.pageX + 15) + "px")
-.style("top", (event.pageY - 20) + "px");
-})
-.on("mouseout", function() {
-d3.select(this).style("fill", "#1e293b").style("stroke", "#38bdf8");
-linksEnter.classed("link-active", false);
-tooltip.style("opacity", 0);
-});
-}
-// Bind Event Listeners to Sliders for Dynamic Tuning
-d3.select("#germany-slider").on("input", function() {
-weights.germany = +this.value / 100;
-d3.select("#germany-val").text(this.value + "%");
-updateTree();
-});
-d3.select("#france-slider").on("input", function() {
-weights.france = +this.value / 100;
-d3.select("#france-val").text(this.value + "%");
-updateTree();
-});
-// Run initial execution layer rendering step
-updateTree();
-});
-
-
-
-// ### Key UI Features Added:
-// * **True Flags & Identifiers:** Emojis are directly integrated to provide clean visual anchors (🇩🇪, 🇫🇷, 🇺🇸, 🇳🇴) rather than forcing heavy image downloads into your file structure.
-// * **Live Probability Tuning Sliders:** The panel at the top lets you shift weight parameters on the fly, instantly recalculating joint outcomes in real-time across the entire D3 matrix.
-// * **Polished Interactive Hovering UI:** Moving your mouse over any specific node highlights its precise pathway via dynamic CSS color mapping (`.link-active`) and launches a contextual data tooltip card.
-
-// Commit this code directly into your repository, reload the page, and you will see your production dashboard live in action.
-
-// <ContextualQuestions>
-// What adjustments would you like to make to the tracking configuration next?
-// * Do you want to map out the **exact, complete Round of 32 routing arrays** to handle every group placement variable?
-// * Should we modify the theme layout to match the **exact custom styling rules of your main Carto portfolio site**?
-// * Do you need help formatting the layout container code to make it **fluidly responsive for mobile phone viewing**?
-// </ContextualQuestions>
-
+                const nodeMerge = nodeEnter.merge(nodeSelection);
+                nodeMerge.classed("node-collapsed", d => !d.children && d.data._children);nodeMerge.transition().duration(250).attr("transform", d => translate(${d.y},${d.x}));nodeMerge.select("text").attr("x", d => d.children || d.data._children ? -16 : 16).style("text-anchor", d => d.children || d.data._children ? "end" : "start").text(d => d.data.name);nodeMerge.select("rect").on("click", function(event, d) {event.stopPropagation();if (d.children) {d.data._children = d.children;d.children = null;} else if (d.data._children) {d.children = d.data._children;d.data._children = null;}render();}).on("mouseover", function(event, d) {zoomGroup.selectAll(".link").filter(l => l.target === d || l.source === d).classed("link-active", true);let tooltipHtml = "";if (d.data.type === "root") {tooltipHtml = <div class="tooltip-header">Host Venue</div><strong>${d.data.name}</strong><br>Philadelphia, July 4th;} else if (d.data.type === "mid") {tooltipHtml = <div class="tooltip-header">Feeder Probability</div><strong>${d.data.name}</strong><br><span class="tooltip-stat">${(d.data.prob * 100).toFixed(0)}%</span> chance to reach Philly;} else {tooltipHtml = <div class="tooltip-header">Calculated Joint Output</div><strong>${d.data.name} Matchup</strong><br>Total Bracket Probability: <span class="tooltip-stat">${(d.data.joint * 100).toFixed(1)}%</span>;}tooltip.style("opacity", 1).html(tooltipHtml).style("left", (event.pageX + 15) + "px").style("top", (event.pageY - 20) + "px");}).on("mouseout", function() {zoomGroup.selectAll(".link").classed("link-active", false);tooltip.style("opacity", 0);});}d3.select("#germany-slider").on("input", function() {weights.germany = +this.value / 100;d3.select("#germany-val").text(this.value + "%");render();});d3.select("#france-slider").on("input", function() {weights.france = +this.value / 100;d3.select("#france-val").text(this.value + "%");render();});render();});
 
