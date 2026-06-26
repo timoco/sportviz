@@ -246,5 +246,67 @@
                     .attr("dy", ".35em");
 
                 const nodeMerge = nodeEnter.merge(nodeSelection);
-                nodeMerge.classed("node-collapsed", d => !d.children && d.data._children);nodeMerge.transition().duration(250).attr("transform", d => translate(${d.y},${d.x}));nodeMerge.select("text").attr("x", d => d.children || d.data._children ? -16 : 16).style("text-anchor", d => d.children || d.data._children ? "end" : "start").text(d => d.data.name);nodeMerge.select("rect").on("click", function(event, d) {event.stopPropagation();if (d.children) {d.data._children = d.children;d.children = null;} else if (d.data._children) {d.children = d.data._children;d.data._children = null;}render();}).on("mouseover", function(event, d) {zoomGroup.selectAll(".link").filter(l => l.target === d || l.source === d).classed("link-active", true);let tooltipHtml = "";if (d.data.type === "root") {tooltipHtml = <div class="tooltip-header">Host Venue</div><strong>${d.data.name}</strong><br>Philadelphia, July 4th;} else if (d.data.type === "mid") {tooltipHtml = <div class="tooltip-header">Feeder Probability</div><strong>${d.data.name}</strong><br><span class="tooltip-stat">${(d.data.prob * 100).toFixed(0)}%</span> chance to reach Philly;} else {tooltipHtml = <div class="tooltip-header">Calculated Joint Output</div><strong>${d.data.name} Matchup</strong><br>Total Bracket Probability: <span class="tooltip-stat">${(d.data.joint * 100).toFixed(1)}%</span>;}tooltip.style("opacity", 1).html(tooltipHtml).style("left", (event.pageX + 15) + "px").style("top", (event.pageY - 20) + "px");}).on("mouseout", function() {zoomGroup.selectAll(".link").classed("link-active", false);tooltip.style("opacity", 0);});}d3.select("#germany-slider").on("input", function() {weights.germany = +this.value / 100;d3.select("#germany-val").text(this.value + "%");render();});d3.select("#france-slider").on("input", function() {weights.france = +this.value / 100;d3.select("#france-val").text(this.value + "%");render();});render();});
+
+
+nodeMerge.classed("node-collapsed", d => !d.children && d.data._children);
+nodeMerge.transition().duration(250)
+.attr("transform", d => translate(${d.y},${d.x}));
+nodeMerge.select("text")
+.attr("x", d => d.children || d.data._children ? -16 : 16)
+.style("text-anchor", d => d.children || d.data._children ? "end" : "start")
+.text(d => d.data.name);
+nodeMerge.select("rect")
+.on("click", function(event, d) {
+event.stopPropagation();
+if (d.children) {
+d.data._children = d.children;
+d.children = null;
+} else if (d.data._children) {
+d.children = d.data._children;
+d.data._children = null;
+}
+render();
+})
+.on("mouseover", function(event, d) {
+zoomGroup.selectAll(".link")
+.filter(l => l.target === d || l.source === d)
+.classed("link-active", true);
+let tooltipHtml = "";
+if (d.data.type === "root") {
+tooltipHtml = <div class="tooltip-header">Host Venue</div><strong>${d.data.name}</strong><br>Philadelphia, July 4th;
+} else if (d.data.type === "mid") {
+tooltipHtml = <div class="tooltip-header">Feeder Probability</div><strong>${d.data.name}</strong><br><span class="tooltip-stat">${(d.data.prob * 100).toFixed(0)}%</span> chance to reach Philly;
+} else {
+tooltipHtml = <div class="tooltip-header">Calculated Joint Output</div><strong>${d.data.name} Matchup</strong><br>Total Bracket Probability: <span class="tooltip-stat">${(d.data.joint * 100).toFixed(1)}%</span>;
+}
+tooltip.style("opacity", 1)
+.html(tooltipHtml)
+.style("left", (event.pageX + 15) + "px")
+.style("top", (event.pageY - 20) + "px");
+})
+.on("mouseout", function() {
+zoomGroup.selectAll(".link").classed("link-active", false);
+tooltip.style("opacity", 0);
+});
+}
+d3.select("#germany-slider").on("input", function() {
+weights.germany = +this.value / 100;
+d3.select("#germany-val").text(this.value + "%");
+render();
+});
+d3.select("#france-slider").on("input", function() {
+weights.france = +this.value / 100;
+d3.select("#france-val").text(this.value + "%");
+render();
+});
+render();
+});
+
+
+
+// The context and relevance of the next potential milestones for this visual tool are explained below.
+// * Would you like me to write a **GitHub Action file** that automatically stamps this code with the active system log time on every push?
+// * Do you want to swap out the text labels for **embedded inline SVG nodes** to feature higher-resolution design components?
+// * Should we configure a **reset button** to snap the camera viewport layout back to its original grid perspective?
+
 
